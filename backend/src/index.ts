@@ -4,10 +4,13 @@ import fs from "fs";
 import path from "path";
 import multer from "multer";
 import { Stats } from "fs";
-import { UploadVideoMetaToSql } from "./db";
+import { GetAllMovies, UploadVideoMetaToSql } from "./db";
+import getVideoDurationInSeconds from "get-video-duration";
+var ffmpeg = require("fluent-ffmpeg");
 
 const app = express();
 const port = 3001;
+const imagesDir = path.join(__dirname, "..", "images");
 
 // config
 app.use(
@@ -31,7 +34,7 @@ app.use(function (req, res, next) {
 });
 app.use(express.json({ limit: "5gb" }));
 app.use(express.urlencoded({ limit: "50gb", extended: true }));
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/images", express.static(imagesDir));
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
   res.status(500).send("Something broke!");
@@ -48,11 +51,9 @@ const storage = multer.diskStorage({
     cb(null, "uploads/");
   },
   filename: async (req, file, cb) => {
-    cb(
-      null,
-      file.fieldname + "-" + Date.now() + path.extname(file.originalname)
-    );
-    await UploadVideoMetaToSql("", "", file.originalname, 0);
+    let filePath =
+      file.fieldname + "-" + Date.now() + path.extname(file.originalname);
+    cb(null, filePath);
   },
 });
 
@@ -64,12 +65,45 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 // Upload video route
-app.post("/upload", upload.single("video"), (req: Request, res: Response) => {
-  if (!req.file) {
-    return res.status(400).send("No file uploaded.");
+app.post(
+  "/upload",
+  upload.single("video"),
+  async (req: Request, res: Response) => {
+    if (!req.file) {
+      return res.status(400).send("No file uploaded.");
+    }
+    res.json({ file: `uploads/${req.file.filename}` });
+    let duration = 0;
+    let filePath = `./uploads/${req.file.filename}`;
+    await getVideoDurationInSeconds(filePath).then((d) => {
+      duration = Math.floor(d / 60);
+    });
+    ffmpeg(filePath)
+      .on("end", function () {
+        console.log("Screenshots taken");
+      })
+      .on("error", function (err: Error) {
+        console.error(err);
+      })
+      .screenshots({
+        // Will take screenshots at 20%, 40%, 60% and 80% of the video
+        count: 1,
+        folder: "./images",
+        filename: `${req.file.filename}.png`,
+      });
+    await UploadVideoMetaToSql(
+      req.file.filename,
+      `http://localhost:3001/images/${req.file.filename}.png`,
+      req?.query?.name as unknown as string,
+      duration
+    );
   }
-  console.log("first");
-  res.json({ file: `uploads/${req.file.filename}` });
+);
+
+app.get("/api/movies", async (req: Request, res: Response) => {
+  await GetAllMovies(0, 10).then((r) => {
+    return res.status(200).send(r);
+  });
 });
 
 // Stream video route

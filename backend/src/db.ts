@@ -18,3 +18,11 @@ export async function UploadVideoMetaToSql(
   });
   return newImage;
 }
+
+export async function GetAllMovies(skip: number, take: number) {
+  const newImage = await prisma.video.findMany({
+    skip,
+    take,
+  });
+  return newImage;
+}

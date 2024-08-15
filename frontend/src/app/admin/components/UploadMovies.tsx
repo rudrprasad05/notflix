@@ -7,6 +7,7 @@ import axios from "axios";
 
 export default function UploadMovies() {
   const [file, setFile] = useState<File | null>(null);
+  const [movieName, setMovieName] = useState<string>("");
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [uploadSuccess, setUploadSuccess] = useState<boolean | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -26,6 +27,7 @@ export default function UploadMovies() {
 
     const formData = new FormData();
     formData.append("video", file);
+    formData.append("name", movieName);
 
     try {
       const response = await axios.post(
@@ -40,6 +42,9 @@ export default function UploadMovies() {
               (progressEvent.loaded * 100) / (progressEvent.total || 1)
             );
             setUploadProgress(progress);
+          },
+          params: {
+            name: movieName,
           },
         }
       );
@@ -61,7 +66,13 @@ export default function UploadMovies() {
   return (
     <div className="my-5">
       <h1 className="text-xl text-white">Upload Movies</h1>
-      <main>
+      <main className="border border-solid rounded-xl w-full px-12 py-8 gap-5 flex flex-col">
+        <h1 className="text-xl">Upload Movie</h1>
+        <Input
+          onChange={(e) => setMovieName(e.target.value)}
+          type="text"
+          placeholder="Enter movie name (will be shown)"
+        />
         <Input
           onChange={handleFileChange}
           type="file"

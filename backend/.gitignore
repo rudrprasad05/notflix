@@ -9,6 +9,7 @@
 # testing
 /coverage
 /uploads
+/images
 
 # next.js
 /.next/

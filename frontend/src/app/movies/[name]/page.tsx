@@ -6,10 +6,12 @@ const page = ({ params }: { params: { name: string } }) => {
   const videoRef = useRef(null);
 
   const playVideo = () => {
+    // @ts-ignore
     videoRef?.current?.play();
   };
 
   const pauseVideo = () => {
+    // @ts-ignore
     videoRef?.current?.pause();
   };
   return (
